@@ -1,7 +1,7 @@
 type dictionnaire = (string, bool) Hashtbl.t
 
 let nb_mots = 386625
-let liste_fn = "ODS6.txt"
+let liste_fn = "ODS8.txt"
 let string_of_char = String.make 1
 
 let read_words (fn : string) : string list =
