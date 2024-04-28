@@ -2,7 +2,25 @@ type dictionnaire = (string, bool) Hashtbl.t
 
 let nb_mots = 386625
 let liste_fn = "ODS8.txt"
+let des_fn = "des.txt"
 let string_of_char = String.make 1
+
+(*Swaps elements of `a` in position `i` and `j`, which are suppposed to be valid indexes*)
+let swap (a : 'a array) (i : int) (j : int) : unit =
+  let temp = a.(j) in
+  a.(j) <- a.(i);
+  a.(i) <- temp
+
+let shuffle ?(seed : int option) (a : 'a array) =
+  match seed with
+  | Some k -> Random.init k
+  | None ->
+      Random.self_init ();
+      let n = Array.length a in
+      for i = 0 to n - 1 do
+        let j = Random.int n in
+        swap a i j
+      done
 
 let read_words (fn : string) : string list =
   let rec read_aux (fd : in_channel) (acc : string list) : string list =
@@ -73,6 +91,26 @@ let grille_ex : grille =
 let read_grille (fn : string) : grille =
   let lignes = read_words fn in
   Array.of_list (List.map (fun x -> Array.of_seq (String.to_seq x)) lignes)
+
+let des : char array array =
+  let lignes = read_words des_fn in
+  List.map (fun x -> Array.of_seq (String.to_seq x)) lignes |> Array.of_list
+
+let gen_grille ?(seed : int option) (n : int) : grille =
+  let g = Array.init n (fun x -> Array.make n ' ') in
+  let des_shuffled = Array.copy des in
+  (match seed with
+  | Some s -> shuffle ~seed:s des_shuffled
+  | None -> shuffle des_shuffled);
+  for i = 0 to n - 1 do
+    for j = 0 to n - 1 do
+      (*Dé à placer*)
+      let d = des_shuffled.((i * n) + j) in
+      (*On sélectionne une face*)
+      g.(i).(j) <- d.(Random.int 6)
+    done
+  done;
+  g
 
 let in_grid (n : int) ((x, y) : int * int) : bool =
   0 <= x && x < n && 0 <= y && y < n
