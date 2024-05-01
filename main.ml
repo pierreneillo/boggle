@@ -1,6 +1,7 @@
 type dictionnaire = (string, bool) Hashtbl.t
 
-let nb_mots = 386625
+let nb_mots = 411430
+let l_max = 18
 let liste_fn = "ODS8.txt"
 let des_fn = "des.txt"
 let string_of_char = String.make 1
@@ -49,6 +50,8 @@ let est_prefixe (w1 : string) (w2 : string) : bool =
     w1 = String.sub w2 0 (String.length w1)
   else w2 = String.sub w1 0 (String.length w2)
 
+let est_egal (w1 : string) (w2 : string) : bool = w1 = w2
+
 let suppr_prefixes (l : string list) : string list =
   let rec suppr_prefixes_aux (l : string list) : string list =
     match l with
@@ -60,6 +63,19 @@ let suppr_prefixes (l : string list) : string list =
         else x :: suppr_prefixes_aux q
   in
   suppr_prefixes_aux
+    (List.sort (fun s1 s2 -> String.length s1 - String.length s2) l)
+
+let suppr_egaux (l : string list) : string list =
+  let rec suppr_egaux_aux (l : string list) : string list =
+    match l with
+    | [] -> []
+    | x :: q ->
+        if List.exists (est_egal x) q then
+          (* Le mot est égal à un autre dans la liste: on l'enlève*)
+          suppr_egaux_aux q
+        else x :: suppr_egaux_aux q
+  in
+  suppr_egaux_aux
     (List.sort (fun s1 s2 -> String.length s1 - String.length s2) l)
 
 let init_dict () : dictionnaire =
@@ -131,7 +147,8 @@ let neighbors ((x, y) : int * int) (n : int) (forbidden : (int * int) list) :
   List.filter (fun x -> not (List.mem x forbidden)) poss
 
 (*Renvoie la liste des mots existant dans la grille (selon le dictionnaire dico , qui doit avoir été défini avec ini_dico)*)
-let find_words (dico : dictionnaire) (g : grille) : string list =
+let find_words ?(garder_prefixes : bool option) (dico : dictionnaire)
+    (g : grille) : string list =
   let n = Array.length g in
   let trouves : string list ref = ref [] in
   let rec crawl (pos : int * int) (pos_acc : (int * int) list)
@@ -156,7 +173,33 @@ let find_words (dico : dictionnaire) (g : grille) : string list =
       crawl (i, j) [ (i, j) ] (string_of_char g.(i).(j))
     done
   done;
-  List.sort String.compare (suppr_prefixes !trouves)
+  match garder_prefixes with
+  | None | Some false -> List.sort String.compare (suppr_prefixes !trouves)
+  | Some true -> List.sort String.compare (suppr_egaux !trouves)
 
 let d = init_dict ()
 let boggle fn = find_words d (read_grille fn)
+
+let stats (n : int) (nb_parties : int) : unit =
+  let nb_mots_par_taille = Array.make l_max 0 in
+  (*nb_mots.(i) est le nombre de mots de taille i+4*)
+  let rec parse_mots (mots : string list) : unit =
+    match mots with
+    | [] -> ()
+    | x :: q ->
+        let i = String.length x - 4 in
+        nb_mots_par_taille.(i) <- nb_mots_par_taille.(i) + 1;
+        parse_mots q
+  in
+  for i = 0 to nb_parties - 1 do
+    let g = gen_grille n in
+    let mots = find_words ~garder_prefixes:true d g in
+    parse_mots mots
+  done;
+  Printf.printf "Statistiques pour %d parties aléatoires\n" nb_parties;
+  for i = 0 to l_max - 1 do
+    let moy : float =
+      float_of_int nb_mots_par_taille.(i) /. float_of_int nb_parties
+    in
+    Printf.printf "%.2f mots de longueur %d en moyenne\n" moy (i + 4)
+  done
