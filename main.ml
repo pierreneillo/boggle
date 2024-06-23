@@ -178,7 +178,24 @@ let find_words ?(garder_prefixes : bool option) (dico : dictionnaire)
   | Some true -> List.sort String.compare (suppr_egaux !trouves)
 
 let d = init_dict ()
-let boggle fn = find_words d (read_grille fn)
+
+let boggle_res (fn : string) : unit =
+  let lw = find_words d (read_grille fn) in
+  Printf.printf "Partie '%s': %d mots\n\n" fn (List.length lw);
+  let r_cmp = ref (List.length lw) in
+  let r_i = ref 4 in
+  while !r_i <= l_max && !r_cmp > 0 do
+    let li =
+      lw
+      |> List.filter (fun x -> String.length x = !r_i)
+      |> List.sort String.compare
+    in
+    Printf.printf "%d mots de %d lettres, %d mots de %d lettres ou plus:\n"
+      (List.length li) !r_i !r_cmp !r_i;
+    r_cmp := !r_cmp - List.length li;
+    li |> List.iter (fun x -> Printf.printf "\t%s\n" x);
+    incr r_i
+  done
 
 let stats (n : int) (nb_parties : int) : unit =
   let nb_mots_par_taille = Array.make l_max 0 in
@@ -201,5 +218,6 @@ let stats (n : int) (nb_parties : int) : unit =
     let moy : float =
       float_of_int nb_mots_par_taille.(i) /. float_of_int nb_parties
     in
-    Printf.printf "%.2f mots de longueur %d en moyenne\n" moy (i + 4)
+    if moy > 0. then
+      Printf.printf "%.2f mots de longueur %d en moyenne\n" moy (i + 4)
   done
