@@ -179,8 +179,11 @@ let find_words ?(garder_prefixes : bool option) (dico : dictionnaire)
 
 let d = init_dict ()
 
-let boggle_res (fn : string) : unit =
-  let lw = find_words d (read_grille fn) in
+let boggle_res ?(garder_prefixes: bool option)(fn : string) : unit =
+  let lw = match garder_prefixes with
+	| Some b  -> find_words ~garder_prefixes:b d (read_grille fn)
+	| None -> find_words d (read_grille fn)
+  in
   Printf.printf "Partie '%s': %d mots\n\n" fn (List.length lw);
   let r_cmp = ref (List.length lw) in
   let r_i = ref 4 in
